@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.cfg.HandlerInstantiator;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
+import com.fasterxml.jackson.databind.deser.impl.UnwrappedPropertyHandler;
 import com.fasterxml.jackson.databind.jdk14.JDK14Util;
 import com.fasterxml.jackson.databind.util.ClassUtil;
 
@@ -716,6 +717,14 @@ public class POJOPropertiesCollector
         PropertyName pn = _annotationIntrospector.findNameForDeserialization(param);
         boolean expl = (pn != null && !pn.isEmpty());
         if (!expl) {
+            boolean unrwapping = _annotationIntrospector.findUnwrappingNameTransformer(param) != null;
+            if (unrwapping) {
+                POJOPropertyBuilder prop = _property(props, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME);
+                prop.addCtor(param, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, false, true, false);
+                _creatorProperties.add(prop);
+                return;
+            }
+
             if (impl.isEmpty()) {
                 // Important: if neither implicit nor explicit name, cannot make use of
                 // this creator parameter -- may or may not be a problem, verified at a later point.

@@ -848,7 +848,7 @@ public class BeanDeserializer
             if (buffer.readIdProperty(propName) && creatorProp == null) {
                 continue;
             }
-            if (creatorProp != null) {
+            if (creatorProp != null && !_unwrappedPropertyHandler.isUnwrapped(creatorProp)) {
                 // Last creator property to set?
                 if (buffer.assignParameter(creatorProp,
                         _deserializeWithErrorWrapping(p, ctxt, creatorProp))) {
@@ -918,6 +918,10 @@ public class BeanDeserializer
                 continue;
             }
         }
+
+        // We could still have some unset creator properties that are unwrapped. These have to be processed last, because 'tokens' contains
+        // all the properties that remain after regular deserialization.
+        buffer = _unwrappedPropertyHandler.processUnwrappedCreatorProperties(p, ctxt, buffer, tokens);
 
         // We hit END_OBJECT, so:
         Object bean;

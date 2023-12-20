@@ -577,7 +577,13 @@ public abstract class BeanDeserializerBase
                     if (unwrapped == null) {
                         unwrapped = new UnwrappedPropertyHandler();
                     }
-                    unwrapped.addProperty(prop);
+
+                    if (prop instanceof CreatorProperty) {
+                        unwrapped.addCreatorProperty(prop);
+                    } else {
+                        unwrapped.addProperty(prop);
+                    }
+
                     // 12-Dec-2014, tatu: As per [databind#647], we will have problems if
                     //    the original property is left in place. So let's remove it now.
                     // 25-Mar-2017, tatu: Wonder if this could be problematic wrt creators?
@@ -1010,13 +1016,6 @@ ClassUtil.name(refName), ClassUtil.getTypeDescription(backRefType),
         if (am != null) {
             NameTransformer unwrapper = ctxt.getAnnotationIntrospector().findUnwrappingNameTransformer(am);
             if (unwrapper != null) {
-                // 01-Dec-2016, tatu: As per [databind#265] we cannot yet support passing
-                //   of unwrapped values through creator properties, so fail fast
-                if (prop instanceof CreatorProperty) {
-                    ctxt.reportBadDefinition(getValueType(), String.format(
-                            "Cannot define Creator property \"%s\" as `@JsonUnwrapped`: combination not yet supported",
-                            prop.getName()));
-                }
                 return unwrapper;
             }
         }

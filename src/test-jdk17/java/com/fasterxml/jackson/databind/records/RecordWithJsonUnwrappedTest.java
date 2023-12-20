@@ -3,7 +3,6 @@ package com.fasterxml.jackson.databind.records;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.BaseMapTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.struct.TestUnwrappedWithJsonCreator;
 
 public class RecordWithJsonUnwrappedTest extends BaseMapTest {
     record RecordWithJsonUnwrapped(String unrelated, @JsonUnwrapped Inner inner) {

@@ -717,8 +717,8 @@ public class POJOPropertiesCollector
         PropertyName pn = _annotationIntrospector.findNameForDeserialization(param);
         boolean expl = (pn != null && !pn.isEmpty());
         if (!expl) {
-            boolean unrwapping = _annotationIntrospector.findUnwrappingNameTransformer(param) != null;
-            if (unrwapping) {
+            boolean unwrapping = _annotationIntrospector.findUnwrappingNameTransformer(param) != null;
+            if (unwrapping) {
                 POJOPropertyBuilder prop = _property(props, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME);
                 prop.addCtor(param, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, false, true, false);
                 _creatorProperties.add(prop);

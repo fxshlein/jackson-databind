@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.*;
 /**
  * Tests to verify [databind#1467].
  */
-public class TestUnwrappedWithJsonCreator extends BaseMapTest
+public class UnwrappedWithCreatorTest extends BaseMapTest
 {
 
 	static class ExplicitWithoutName {

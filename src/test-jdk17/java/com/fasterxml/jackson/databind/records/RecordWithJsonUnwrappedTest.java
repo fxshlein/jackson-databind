@@ -3,6 +3,7 @@ package com.fasterxml.jackson.databind.records;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.BaseMapTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class RecordWithJsonUnwrappedTest extends BaseMapTest {
     record RecordWithJsonUnwrapped(String unrelated, @JsonUnwrapped Inner inner) {
@@ -15,14 +16,21 @@ public class RecordWithJsonUnwrappedTest extends BaseMapTest {
 
     /*
     /**********************************************************************
-    /* Tests, JsonUnwrapped deserialization
+    /* Test methods, JsonUnwrapped
     /**********************************************************************
      */
 
     public void testUnwrappedWithRecord() throws Exception
     {
-        String json = "{\"unrelated\": \"unrelatedValue\", \"property1\": \"value1\", \"property2\": \"value2\"}";
-        RecordWithJsonUnwrapped outer = MAPPER.readValue(json, RecordWithJsonUnwrapped.class);
+        RecordWithJsonUnwrapped initial = new RecordWithJsonUnwrapped("unrelatedValue", new Inner("value1", "value2"));
+
+        ObjectNode tree = MAPPER.valueToTree(initial);
+
+        assertEquals("unrelatedValue", tree.get("unrelated").textValue());
+        assertEquals("value1", tree.get("property1").textValue());
+        assertEquals("value2", tree.get("property2").textValue());
+
+        RecordWithJsonUnwrapped outer = MAPPER.treeToValue(tree, RecordWithJsonUnwrapped.class);
 
         assertEquals("unrelatedValue", outer.unrelated());
         assertEquals("value1", outer.inner().property1());

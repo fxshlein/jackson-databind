@@ -1150,15 +1150,6 @@ paramIndex, candidate);
         }
     }
 
-    protected void _reportUnnamedUnwrappedCreatorProperty(DeserializationContext ctxt,
-                                                          BeanDescription beanDesc, AnnotatedParameter param)
-            throws JsonMappingException
-    {
-        ctxt.reportBadTypeDefinition(beanDesc,
-                "Cannot define Creator parameter %d as `@JsonUnwrapped` without also specifying `@JsonProperty`",
-                param.getIndex());
-    }
-
     /**
      * Method that will construct a property object that represents
      * a logical property passed via Creator (constructor or static

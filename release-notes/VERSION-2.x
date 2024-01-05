@@ -6,6 +6,9 @@ Project: jackson-databind
 
 2.17.0 (not yet released)
 
+#437: Support throwing `MismatchedInputException` when deserializing
+  properties that are not part of the view
+ (contributed by Joo-Hyuk K)
 #736: `MapperFeature.REQUIRE_SETTERS_FOR_GETTERS` has no effect
  (reported by @migel)
  (fix contributed by Joo-Hyuk K)
@@ -29,7 +32,7 @@ Project: jackson-databind
 #4263: Change `ObjectArrayDeserializer` to use "generic" type parameter
   (`java.lang.Object`) to remove co-variant return type
 
-2.16.1 (not yet released)
+2.16.1 (24-Dec-2023)
 
 #4200: `JsonSetter(contentNulls = FAIL)` is ignored in delegating
   `@JsonCreator` argument

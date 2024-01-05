@@ -64,7 +64,7 @@ public class UnwrappedPropertyHandler {
             Collection<SettableBeanProperty> properties,
             NameTransformer transformer
     ) {
-        List<SettableBeanProperty> newProps = new ArrayList(properties.size());
+        List<SettableBeanProperty> newProps = new ArrayList<>(properties.size());
         for (SettableBeanProperty prop : properties) {
             String newName = transformer.transform(prop.getName());
             prop = prop.withSimpleName(newName);

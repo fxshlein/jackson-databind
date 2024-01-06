@@ -2,12 +2,9 @@ package com.fasterxml.jackson.databind.deser.impl;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.PropertyName;
 import com.fasterxml.jackson.databind.deser.SettableBeanProperty;
 import com.fasterxml.jackson.databind.util.NameTransformer;
@@ -59,17 +56,12 @@ public class UnwrappedPropertyHandler {
     ) {
         List<SettableBeanProperty> newProps = new ArrayList<>(properties.size());
         for (SettableBeanProperty prop : properties) {
-            String newName = transformer.transform(prop.getName());
-            prop = prop.withSimpleName(newName);
-            JsonDeserializer<?> deser = prop.getValueDeserializer();
-            if (deser != null) {
-                @SuppressWarnings("unchecked")
-                JsonDeserializer<Object> newDeser = (JsonDeserializer<Object>) deser.unwrappingDeserializer(transformer);
-                if (newDeser != deser) {
-                    prop = prop.withValueDeserializer(newDeser);
-                }
+            if (prop == null) {
+                newProps.add(null);
+                continue;
             }
-            newProps.add(prop);
+
+            newProps.add(prop.unwrapped(transformer));
         }
         return newProps;
     }

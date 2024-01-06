@@ -306,7 +306,6 @@ public abstract class BeanDeserializerBase
         _valueInstantiator = src._valueInstantiator;
         _delegateDeserializer = src._delegateDeserializer;
         _arrayDelegateDeserializer = src._arrayDelegateDeserializer;
-        _propertyBasedCreator = src._propertyBasedCreator;
 
         _backRefs = src._backRefs;
         _ignorableProps = src._ignorableProps;
@@ -318,6 +317,7 @@ public abstract class BeanDeserializerBase
 
         _nonStandardCreation = src._nonStandardCreation;
         UnwrappedPropertyHandler uph = src._unwrappedPropertyHandler;
+        PropertyBasedCreator pbc = src._propertyBasedCreator;
 
         if (unwrapper != null) {
             // delegate further unwraps, if any
@@ -325,8 +325,10 @@ public abstract class BeanDeserializerBase
                 uph = uph.renameAll(unwrapper);
             }
             // and handle direct unwrapping as well:
+            _propertyBasedCreator = pbc != null ? pbc.renameAll(unwrapper) : null;
             _beanProperties = src._beanProperties.renameAll(unwrapper);
         } else {
+            _propertyBasedCreator = pbc;
             _beanProperties = src._beanProperties;
         }
         _unwrappedPropertyHandler = uph;

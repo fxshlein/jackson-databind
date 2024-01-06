@@ -27,30 +27,23 @@ public class UnwrappedPropertyHandler {
 
     protected final List<SettableBeanProperty> _creatorProperties;
     protected final List<SettableBeanProperty> _properties;
-    protected final Set<String> _unwrappedPropertyNames;
 
     public UnwrappedPropertyHandler() {
         _creatorProperties = new ArrayList<>();
         _properties = new ArrayList<>();
-        _unwrappedPropertyNames = new HashSet<>();
     }
 
     protected UnwrappedPropertyHandler(List<SettableBeanProperty> creatorProps, List<SettableBeanProperty> props) {
         _creatorProperties = creatorProps;
         _properties = props;
-        _unwrappedPropertyNames = Stream.concat(creatorProps.stream(), props.stream())
-                .map(SettableBeanProperty::getName)
-                .collect(Collectors.toSet());
     }
 
     public void addCreatorProperty(SettableBeanProperty property) {
         _creatorProperties.add(property);
-        _unwrappedPropertyNames.add(property.getName());
     }
 
     public void addProperty(SettableBeanProperty property) {
         _properties.add(property);
-        _unwrappedPropertyNames.add(property.getName());
     }
 
     public UnwrappedPropertyHandler renameAll(NameTransformer transformer) {
@@ -79,10 +72,6 @@ public class UnwrappedPropertyHandler {
             newProps.add(prop);
         }
         return newProps;
-    }
-
-    public boolean isUnwrapped(SettableBeanProperty property) {
-        return this._unwrappedPropertyNames.contains(property.getName());
     }
 
     public PropertyValueBuffer processUnwrappedCreatorProperties(

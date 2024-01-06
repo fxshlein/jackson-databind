@@ -855,7 +855,7 @@ public class BeanDeserializer
             if (buffer.readIdProperty(propName) && creatorProp == null) {
                 continue;
             }
-            if (creatorProp != null && !_unwrappedPropertyHandler.isUnwrapped(creatorProp)) {
+            if (creatorProp != null) {
                 // Last creator property to set?
                 if (buffer.assignParameter(creatorProp,
                         _deserializeWithErrorWrapping(p, ctxt, creatorProp))) {

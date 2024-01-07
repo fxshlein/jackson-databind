@@ -214,6 +214,7 @@ public abstract class BeanDeserializerBase
             BeanPropertyMap properties, Map<String, SettableBeanProperty> backRefs,
             Set<String> ignorableProps, boolean ignoreAllUnknown,
             Set<String> includableProps,
+            UnwrappedPropertyHandler unwrappedPropertyHandler,
             boolean hasViews)
     {
         super(beanDesc.getType());
@@ -223,6 +224,7 @@ public abstract class BeanDeserializerBase
         _delegateDeserializer = null;
         _arrayDelegateDeserializer = null;
         _propertyBasedCreator = null;
+        _unwrappedPropertyHandler = unwrappedPropertyHandler;
 
         _beanProperties = properties;
         _backRefs = backRefs;
@@ -534,7 +536,6 @@ public abstract class BeanDeserializerBase
         } else {
             creatorProps = null;
         }
-        UnwrappedPropertyHandler unwrapped = null;
 
         // 24-Mar-2017, tatu: Looks like we may have to iterate over
         //   properties twice, to handle potential issues with recursive
@@ -544,7 +545,7 @@ public abstract class BeanDeserializerBase
         // 22-Jan-2018, tatu: NOTE! Need not check for `isIgnorable` as that can
         //   only happen for props in `creatorProps`
 
-        for (SettableBeanProperty prop : _beanProperties) {
+        for (SettableBeanProperty prop : _findAllProperties()) {
             if (!prop.hasValueDeserializer()) {
                 // [databind#125]: allow use of converters
                 JsonDeserializer<?> deser = findConvertingDeserializer(ctxt, prop);
@@ -552,12 +553,12 @@ public abstract class BeanDeserializerBase
                     deser = ctxt.findNonContextualValueDeserializer(prop.getType());
                 }
                 SettableBeanProperty newProp = prop.withValueDeserializer(deser);
-                _replaceProperty(_beanProperties, creatorProps, prop, newProp);
+                _replaceProperty(_beanProperties, creatorProps, _unwrappedPropertyHandler, prop, newProp);
             }
         }
 
         // Second loop: contextualize, find other pieces
-        for (SettableBeanProperty origProp : _beanProperties) {
+        for (SettableBeanProperty origProp : _findAllProperties()) {
             SettableBeanProperty prop = origProp;
             JsonDeserializer<?> deser = prop.getValueDeserializer();
             deser = ctxt.handlePrimaryContextualization(deser, prop, prop.getType());
@@ -569,41 +570,28 @@ public abstract class BeanDeserializerBase
             if (!(prop instanceof ManagedReferenceProperty)) {
                 prop = _resolvedObjectIdProperty(ctxt, prop);
             }
+
+            final PropertyMetadata md = prop.getMetadata();
+
             // Support unwrapped values (via @JsonUnwrapped)
-            NameTransformer xform = _findPropertyUnwrapper(ctxt, prop);
-            if (xform != null) {
+            if (md.isUnwrapped()) {
                 JsonDeserializer<Object> orig = prop.getValueDeserializer();
-                JsonDeserializer<Object> unwrapping = orig.unwrappingDeserializer(xform);
+                JsonDeserializer<Object> unwrapping = orig.unwrappingDeserializer(md.getUnwrapper());
                 if (unwrapping != orig && unwrapping != null) {
                     prop = prop.withValueDeserializer(unwrapping);
-                    if (unwrapped == null) {
-                        unwrapped = new UnwrappedPropertyHandler();
-                    }
-
-                    if (prop instanceof CreatorProperty) {
-                        unwrapped.addCreatorProperty(prop);
-                    } else {
-                        unwrapped.addProperty(prop);
-                    }
-
-                    // 12-Dec-2014, tatu: As per [databind#647], we will have problems if
-                    //    the original property is left in place. So let's remove it now.
-                    // 25-Mar-2017, tatu: Wonder if this could be problematic wrt creators?
-                    //    (that is, should be remove it from creator too)
-                    _beanProperties.remove(prop);
-                    continue;
+                    _replaceProperty(_beanProperties, creatorProps, _unwrappedPropertyHandler, origProp, prop);
                 }
+                continue;
             }
 
             // 26-Oct-2016, tatu: Need to have access to value deserializer to know if
             //   merging needed, and now seems to be reasonable time to do that.
-            final PropertyMetadata md = prop.getMetadata();
             prop = _resolveMergeAndNullSettings(ctxt, prop, md);
 
             // non-static inner classes too:
             prop = _resolveInnerClassValuedProperty(ctxt, prop);
             if (prop != origProp) {
-                _replaceProperty(_beanProperties, creatorProps, origProp, prop);
+                _replaceProperty(_beanProperties, creatorProps, _unwrappedPropertyHandler, origProp, prop);
             }
 
             // one more thing: if this property uses "external property" type inclusion,
@@ -664,10 +652,6 @@ ClassUtil.getTypeDescription(_beanType), ClassUtil.classNameOf(_valueInstantiato
             _nonStandardCreation = true;
         }
 
-        _unwrappedPropertyHandler = unwrapped;
-        if (unwrapped != null) { // we consider this non-standard, to offline handling
-            _nonStandardCreation = true;
-        }
         // may need to disable vanilla processing, if unwrapped handling was enabled...
         _vanillaProcessing = _vanillaProcessing && !_nonStandardCreation;
     }
@@ -676,9 +660,10 @@ ClassUtil.getTypeDescription(_beanType), ClassUtil.classNameOf(_valueInstantiato
      * @since 2.8.8
      */
     protected void _replaceProperty(BeanPropertyMap props, SettableBeanProperty[] creatorProps,
-            SettableBeanProperty origProp, SettableBeanProperty newProp)
+            UnwrappedPropertyHandler unwrappedPropertyHandler, SettableBeanProperty origProp,
+            SettableBeanProperty newProp)
     {
-        props.replace(origProp, newProp);
+        props.replaceIfExists(origProp, newProp);
         // [databind#795]: Make sure PropertyBasedCreator's properties stay in sync
         if (creatorProps != null) {
             // 18-May-2015, tatu: _Should_ start with consistent set. But can we really
@@ -700,6 +685,25 @@ ClassUtil.getTypeDescription(_beanType), ClassUtil.classNameOf(_valueInstantiato
             }
             */
         }
+
+        if (unwrappedPropertyHandler != null) {
+            unwrappedPropertyHandler.replaceProperty(origProp, newProp);
+        }
+    }
+
+    protected List<SettableBeanProperty> _findAllProperties()
+    {
+        List<SettableBeanProperty> allProperties =  new ArrayList<>();
+
+        for (SettableBeanProperty property : _beanProperties) {
+            allProperties.add(property);
+        }
+
+        if (_unwrappedPropertyHandler != null) {
+            allProperties.addAll(_unwrappedPropertyHandler.properties());
+        }
+
+        return allProperties;
     }
 
     @SuppressWarnings("unchecked")
@@ -1004,24 +1008,6 @@ ClassUtil.name(refName), ClassUtil.getTypeDescription(backRefType),
             return prop;
         }
         return new ObjectIdReferenceProperty(prop, objectIdInfo);
-    }
-
-    /**
-     * Helper method called to see if given property might be so-called unwrapped
-     * property: these require special handling.
-     */
-    protected NameTransformer _findPropertyUnwrapper(DeserializationContext ctxt,
-            SettableBeanProperty prop)
-        throws JsonMappingException
-    {
-        AnnotatedMember am = prop.getMember();
-        if (am != null) {
-            NameTransformer unwrapper = ctxt.getAnnotationIntrospector().findUnwrappingNameTransformer(am);
-            if (unwrapper != null) {
-                return unwrapper;
-            }
-        }
-        return null;
     }
 
     /**

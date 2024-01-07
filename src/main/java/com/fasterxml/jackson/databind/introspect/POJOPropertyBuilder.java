@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.cfg.ConfigOverride;
 import com.fasterxml.jackson.databind.cfg.MapperConfig;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.databind.util.ClassUtil;
+import com.fasterxml.jackson.databind.util.NameTransformer;
 
 /**
  * Helper class used for aggregating information about a single
@@ -238,6 +239,12 @@ public class POJOPropertyBuilder
                 } else {
                     _metadata = PropertyMetadata.construct(b, desc, idx, def);
                 }
+
+                final NameTransformer unwrapper = _annotationIntrospector.findUnwrappingNameTransformer(prim);
+                if (unwrapper != null) {
+                    _metadata = _metadata.withUnwrapper(unwrapper);
+                }
+
                 if (!_forSerialization) {
                     _metadata = _getSetterInfo(_metadata, prim);
                 }

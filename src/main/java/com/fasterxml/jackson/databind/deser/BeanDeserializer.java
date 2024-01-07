@@ -54,10 +54,12 @@ public class BeanDeserializer
     public BeanDeserializer(BeanDeserializerBuilder builder, BeanDescription beanDesc,
             BeanPropertyMap properties, Map<String, SettableBeanProperty> backRefs,
             HashSet<String> ignorableProps, boolean ignoreAllUnknown,
+            UnwrappedPropertyHandler unwrappedPropertyHandler,
             boolean hasViews)
     {
         super(builder, beanDesc, properties, backRefs,
-                ignorableProps, ignoreAllUnknown, null, hasViews);
+                ignorableProps, ignoreAllUnknown, null,
+                unwrappedPropertyHandler, hasViews);
     }
 
     /**
@@ -68,10 +70,12 @@ public class BeanDeserializer
     public BeanDeserializer(BeanDeserializerBuilder builder, BeanDescription beanDesc,
                             BeanPropertyMap properties, Map<String, SettableBeanProperty> backRefs,
                             HashSet<String> ignorableProps, boolean ignoreAllUnknown, Set<String> includableProps,
+                            UnwrappedPropertyHandler unwrappedPropertyHandler,
                             boolean hasViews)
     {
         super(builder, beanDesc, properties, backRefs,
-                ignorableProps, ignoreAllUnknown, includableProps, hasViews);
+                ignorableProps, ignoreAllUnknown, includableProps,
+                unwrappedPropertyHandler, hasViews);
     }
 
     /**
@@ -835,10 +839,6 @@ public class BeanDeserializer
     protected Object deserializeUsingPropertyBasedWithUnwrapped(JsonParser p, DeserializationContext ctxt)
         throws IOException
     {
-        // 01-Dec-2016, tatu: Note: This IS legal to call, but only when unwrapped
-        //    value itself is NOT passed via `CreatorProperty` (which isn't supported).
-        //    Ok however to pass via setter or field.
-
         final PropertyBasedCreator creator = _propertyBasedCreator;
         PropertyValueBuffer buffer = creator.startBuilding(p, ctxt, _objectIdReader);
 

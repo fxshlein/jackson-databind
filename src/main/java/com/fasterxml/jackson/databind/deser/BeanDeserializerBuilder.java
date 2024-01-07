@@ -5,10 +5,7 @@ import java.util.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
-import com.fasterxml.jackson.databind.deser.impl.BeanPropertyMap;
-import com.fasterxml.jackson.databind.deser.impl.ObjectIdValueProperty;
-import com.fasterxml.jackson.databind.deser.impl.ObjectIdReader;
-import com.fasterxml.jackson.databind.deser.impl.ValueInjector;
+import com.fasterxml.jackson.databind.deser.impl.*;
 import com.fasterxml.jackson.databind.introspect.*;
 import com.fasterxml.jackson.databind.util.Annotations;
 import com.fasterxml.jackson.databind.util.ClassUtil;
@@ -61,6 +58,11 @@ public class BeanDeserializerBuilder
      * Value injectors for deserialization
      */
     protected List<ValueInjector> _injectables;
+
+    /**
+     * Unwrapped properties this bean contains (if any)
+     */
+    protected UnwrappedPropertyHandler _unwrappedPropertyHandler;
 
     /**
      * Back-reference properties this bean contains (if any)
@@ -141,6 +143,7 @@ public class BeanDeserializerBuilder
         // let's make copy of properties
         _properties.putAll(src._properties);
         _injectables = _copy(src._injectables);
+        _unwrappedPropertyHandler = src._unwrappedPropertyHandler != null ? src._unwrappedPropertyHandler.copy() : null;
         _backRefProperties = _copy(src._backRefProperties);
         // Hmmh. Should we create defensive copies here? For now, not yet
         _ignorableProps = src._ignorableProps;
@@ -184,9 +187,31 @@ public class BeanDeserializerBuilder
      */
     public void addProperty(SettableBeanProperty prop)
     {
+        if (prop.getMetadata().isUnwrapped()) {
+            addUnwrappedProperty(prop);
+            return;
+        }
+
         SettableBeanProperty old =  _properties.put(prop.getName(), prop);
+
         if (old != null && old != prop) { // should never occur...
             throw new IllegalArgumentException("Duplicate property '"+prop.getName()+"' for "+_beanDesc.getType());
+        }
+    }
+
+    /**
+     * Method to add an unnamed unwrapped property.
+     */
+    public void addUnwrappedProperty(SettableBeanProperty prop)
+    {
+        if (_unwrappedPropertyHandler == null) {
+            _unwrappedPropertyHandler = new UnwrappedPropertyHandler();
+        }
+
+        if (prop instanceof CreatorProperty) {
+            _unwrappedPropertyHandler.addCreatorProperty(prop);
+        } else {
+            _unwrappedPropertyHandler.addProperty(prop);
         }
     }
 
@@ -412,7 +437,7 @@ public class BeanDeserializerBuilder
 
         return new BeanDeserializer(this,
                 _beanDesc, propertyMap, _backRefProperties, _ignorableProps, _ignoreAllUnknown, _includableProps,
-                anyViews);
+                _unwrappedPropertyHandler, anyViews);
     }
 
     /**
@@ -495,7 +520,7 @@ public class BeanDeserializerBuilder
             BeanPropertyMap propertyMap, boolean anyViews) {
         return new BuilderBasedDeserializer(this,
                 _beanDesc, valueType, propertyMap, _backRefProperties, _ignorableProps, _ignoreAllUnknown,
-                _includableProps, anyViews);
+                _includableProps, _unwrappedPropertyHandler, anyViews);
     }
 
     /*

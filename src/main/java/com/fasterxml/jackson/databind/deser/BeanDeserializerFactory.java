@@ -622,7 +622,27 @@ ClassUtil.name(propName)));
                 final String name = propDef.getName();
                 CreatorProperty cprop = null;
 
+                if (name.isEmpty() && propDef.getMetadata().isUnwrapped()) {
+                    AnnotatedParameter parameter = propDef.getConstructorParameter();
+                    int index = parameter.getIndex();
+                    SettableBeanProperty property = constructCreatorProperty(
+                            ctxt,
+                            beanDesc,
+                            UnwrappedPropertyHandler.creatorParameterName(index),
+                            index,
+                            parameter,
+                            null
+                    );
+
+                    builder.addUnwrappedProperty(property);
+                    continue;
+                }
+
                 for (SettableBeanProperty cp : creatorProps) {
+                    if (cp.getName().isEmpty()) {
+                        continue;
+                    }
+
                     if (name.equals(cp.getName()) && (cp instanceof CreatorProperty)) {
                         cprop = (CreatorProperty) cp;
                         break;
@@ -631,6 +651,10 @@ ClassUtil.name(propName)));
                 if (cprop == null) {
                     List<String> n = new ArrayList<>();
                     for (SettableBeanProperty cp : creatorProps) {
+                        if (cp.getName().isEmpty()) {
+                            continue;
+                        }
+
                         n.add(cp.getName());
                     }
                     ctxt.reportBadPropertyDefinition(beanDesc, propDef,

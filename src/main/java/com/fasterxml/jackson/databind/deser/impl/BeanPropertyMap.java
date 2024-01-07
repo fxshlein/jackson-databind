@@ -442,6 +442,28 @@ public class BeanPropertyMap
     }
 
     /**
+     * Specialized method that can be used to replace an existing entry
+     * with the specified replacement.
+     * If the entry does not exist, nothing happens.
+     */
+    public void replaceIfExists(SettableBeanProperty origProp, SettableBeanProperty newProp)
+    {
+        int i = 1;
+        int end = _hashArea.length;
+
+        for (;; i += 2) {
+            if (i >= end) {
+                return;
+            }
+            if (_hashArea[i] == origProp) {
+                _hashArea[i] = newProp;
+                break;
+            }
+        }
+        _propsInOrder[_findFromOrdered(origProp)] = newProp;
+    }
+
+    /**
      * Specialized method for removing specified existing entry.
      * NOTE: entry MUST exist, otherwise an exception is thrown.
      */

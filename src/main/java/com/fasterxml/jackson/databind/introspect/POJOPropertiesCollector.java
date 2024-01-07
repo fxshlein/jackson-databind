@@ -91,6 +91,15 @@ public class POJOPropertiesCollector
     protected LinkedList<POJOPropertyBuilder> _creatorProperties;
 
     /**
+     * The unwrapped properties collected so far.
+     * <p>
+     * Because unwrapped properties do not necessarily have to be named (for
+     * example, when they are creator properties), they are stored in a separate
+     * list instead of indexed by their name.
+     */
+    protected LinkedList<POJOPropertyBuilder> _unwrappedProperties;
+
+    /**
      * A set of "field renamings" that have been discovered, indicating
      * intended renaming of other accessors: key is the implicit original
      * name and value intended name to use instead.
@@ -246,7 +255,13 @@ public class POJOPropertiesCollector
     public List<BeanPropertyDefinition> getProperties() {
         // make sure we return a copy, so caller can remove entries if need be:
         Map<String, POJOPropertyBuilder> props = getPropertyMap();
-        return new ArrayList<BeanPropertyDefinition>(props.values());
+        ArrayList<BeanPropertyDefinition> allProps = new ArrayList<>(props.values());
+
+        if (_unwrappedProperties != null) {
+            allProps.addAll(_unwrappedProperties);
+        }
+
+        return allProps;
     }
 
     public Map<Object, AnnotatedMember> getInjectables() {
@@ -495,6 +510,10 @@ public class POJOPropertiesCollector
 
         // well, almost last: there's still ordering...
         _sortProperties(props);
+
+        // find unwrapped properties in props and transfer them to '_unwrappedProperties'
+        _transferNamedUnwrapped(props);
+
         _properties = props;
         _collected = true;
     }
@@ -716,30 +735,37 @@ public class POJOPropertiesCollector
 
         PropertyName pn = _annotationIntrospector.findNameForDeserialization(param);
         boolean expl = (pn != null && !pn.isEmpty());
+        boolean unwrapping = _annotationIntrospector.findUnwrappingNameTransformer(param) != null;
         if (!expl) {
-            boolean unwrapping = _annotationIntrospector.findUnwrappingNameTransformer(param) != null;
-            if (unwrapping) {
-                POJOPropertyBuilder prop = _property(props, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME);
-                prop.addCtor(param, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, false, true, false);
-                _creatorProperties.add(prop);
-                return;
-            }
-
             if (impl.isEmpty()) {
-                // Important: if neither implicit nor explicit name, cannot make use of
-                // this creator parameter -- may or may not be a problem, verified at a later point.
-                return;
-            }
+                if (!unwrapping) {
+                    // Important: if neither implicit nor explicit name, cannot make use of
+                    // this creator parameter -- may or may not be a problem, verified at a later point.
+                    return;
+                }
 
-            // Also: if this occurs, there MUST be explicit annotation on creator itself...
-            JsonCreator.Mode creatorMode = _annotationIntrospector.findCreatorAnnotation(_config, param.getOwner());
-            // ...or is a Records canonical constructor
-            boolean isCanonicalConstructor = recordComponentName != null;
-
-            if ((creatorMode == null || creatorMode == JsonCreator.Mode.DISABLED) && !isCanonicalConstructor) {
+                // If the property is being unwrapped, we can still try to handle it, as the name of the unwrapping
+                // property should not matter in most cases.
+                PropertyName name = UnwrappedPropertyHandler.creatorParameterName(param._index);
+                POJOPropertyBuilder prop = _property(name);
+                prop.addCtor(param, name, false, true, false);
+                if (_unwrappedProperties == null) {
+                    _unwrappedProperties = new LinkedList<>();
+                }
+                _unwrappedProperties.add(prop);
                 return;
+            } else {
+                // Also: if this occurs, there MUST be explicit annotation on creator itself...
+                JsonCreator.Mode creatorMode = _annotationIntrospector.findCreatorAnnotation(_config, param.getOwner());
+                // ...or is a Records canonical constructor
+                boolean isCanonicalConstructor = recordComponentName != null;
+
+                if ((creatorMode == null || creatorMode == JsonCreator.Mode.DISABLED) && !isCanonicalConstructor) {
+                    return;
+                }
+
+                pn = PropertyName.construct(impl);
             }
-            pn = PropertyName.construct(impl);
         }
 
         // 27-Dec-2019, tatu: [databind#2527] may need to rename according to field
@@ -940,6 +966,22 @@ public class POJOPropertiesCollector
             if (prev.getClass() == m.getClass()) {
                 reportProblem("Duplicate injectable value with id '%s' (of type %s)",
                         id, ClassUtil.classNameOf(id));
+            }
+        }
+    }
+
+    protected void _transferNamedUnwrapped(Map<String, POJOPropertyBuilder> props)
+    {
+        Iterator<POJOPropertyBuilder> values = props.values().iterator();
+        while (values.hasNext()) {
+            POJOPropertyBuilder property = values.next();
+
+            if (property.getMetadata().isUnwrapped()) {
+                values.remove();
+                if (_unwrappedProperties == null) {
+                    _unwrappedProperties = new LinkedList<>();
+                }
+                _unwrappedProperties.add(property);
             }
         }
     }
@@ -1406,11 +1448,19 @@ public class POJOPropertiesCollector
         String simpleName = name.getSimpleName();
         POJOPropertyBuilder prop = props.get(simpleName);
         if (prop == null) {
-            prop = new POJOPropertyBuilder(_config, _annotationIntrospector,
-                    _forSerialization, name);
+            prop = _property(name);
             props.put(simpleName, prop);
         }
         return prop;
+    }
+
+    protected POJOPropertyBuilder _property(PropertyName name) {
+        return new POJOPropertyBuilder(
+                _config,
+                _annotationIntrospector,
+                _forSerialization,
+                name
+        );
     }
 
     // !!! TODO: deprecate, require use of PropertyName

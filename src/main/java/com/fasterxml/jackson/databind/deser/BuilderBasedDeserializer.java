@@ -51,9 +51,10 @@ public class BuilderBasedDeserializer
             BeanDescription beanDesc, JavaType targetType,
             BeanPropertyMap properties, Map<String, SettableBeanProperty> backRefs,
             Set<String> ignorableProps, boolean ignoreAllUnknown,
+            UnwrappedPropertyHandler unwrappedPropertyHandler,
             boolean hasViews)
     {
-        this(builder, beanDesc, targetType, properties, backRefs, ignorableProps, ignoreAllUnknown, null, hasViews);
+        this(builder, beanDesc, targetType, properties, backRefs, ignorableProps, ignoreAllUnknown, null, unwrappedPropertyHandler, hasViews);
     }
 
     /**
@@ -63,10 +64,12 @@ public class BuilderBasedDeserializer
                                     BeanDescription beanDesc, JavaType targetType,
                                     BeanPropertyMap properties, Map<String, SettableBeanProperty> backRefs,
                                     Set<String> ignorableProps, boolean ignoreAllUnknown, Set<String> includableProps,
+                                    UnwrappedPropertyHandler unwrappedPropertyHandler,
                                     boolean hasViews)
     {
         super(builder, beanDesc, properties, backRefs,
-                ignorableProps, ignoreAllUnknown, includableProps, hasViews);
+                ignorableProps, ignoreAllUnknown, includableProps,
+                unwrappedPropertyHandler, hasViews);
         _targetType = targetType;
         _buildMethod = builder.getBuildMethod();
         // 05-Mar-2012, tatu: Cannot really make Object Ids work with builders, not yet anyway
@@ -88,7 +91,7 @@ public class BuilderBasedDeserializer
     {
         this(builder, beanDesc,
                 beanDesc.getType(), // Wrong! But got no access via `BeanDeserializerBuilder`
-                properties, backRefs, ignorableProps, ignoreAllUnknown, hasViews);
+                properties, backRefs, ignorableProps, ignoreAllUnknown, null, hasViews);
     }
 
     /**

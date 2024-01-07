@@ -2,6 +2,7 @@ package com.fasterxml.jackson.databind;
 
 import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.introspect.AnnotatedMember;
+import com.fasterxml.jackson.databind.util.NameTransformer;
 
 /**
  * Simple container class used for storing "additional" metadata about
@@ -17,13 +18,13 @@ public class PropertyMetadata
     private static final long serialVersionUID = -1;
 
     public final static PropertyMetadata STD_REQUIRED = new PropertyMetadata(Boolean.TRUE,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     public final static PropertyMetadata STD_OPTIONAL = new PropertyMetadata(Boolean.FALSE,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     public final static PropertyMetadata STD_REQUIRED_OR_OPTIONAL = new PropertyMetadata(null,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null);
 
     /**
      * Helper class used for containing information about expected merge
@@ -108,6 +109,11 @@ public class PropertyMetadata
      */
     protected Nulls _valueNulls, _contentNulls;
 
+    /**
+     * The {@link NameTransformer} used to unwrap the value of property. {@code null} if this property is not unwrapped.
+     */
+    protected NameTransformer _unwrapper;
+
     /*
     /**********************************************************
     /* Construction, configuration
@@ -118,7 +124,7 @@ public class PropertyMetadata
      * @since 2.9
      */
     protected PropertyMetadata(Boolean req, String desc, Integer index, String def,
-            MergeInfo mergeInfo, Nulls valueNulls, Nulls contentNulls)
+           MergeInfo mergeInfo, Nulls valueNulls, Nulls contentNulls, NameTransformer unwrapper)
     {
         _required = req;
         _description = desc;
@@ -127,6 +133,7 @@ public class PropertyMetadata
         _mergeInfo = mergeInfo;
         _valueNulls = valueNulls;
         _contentNulls = contentNulls;
+        _unwrapper = unwrapper;
     }
 
     /**
@@ -136,7 +143,7 @@ public class PropertyMetadata
             String defaultValue) {
         if ((desc != null) || (index != null) || (defaultValue != null)) {
             return new PropertyMetadata(req, desc, index, defaultValue,
-                    null, null, null);
+                    null, null, null, null);
         }
         if (req == null) {
             return STD_REQUIRED_OR_OPTIONAL;
@@ -149,7 +156,7 @@ public class PropertyMetadata
             String defaultValue) {
         if (desc != null || index != null || defaultValue != null) {
             return new PropertyMetadata(req, desc, index, defaultValue,
-                    null, null, null);
+                    null, null, null, null);
         }
         return req ? STD_REQUIRED : STD_OPTIONAL;
     }
@@ -173,7 +180,7 @@ public class PropertyMetadata
 
     public PropertyMetadata withDescription(String desc) {
         return new PropertyMetadata(_required, desc, _index, _defaultValue,
-                _mergeInfo, _valueNulls, _contentNulls);
+                _mergeInfo, _valueNulls, _contentNulls, _unwrapper);
     }
 
     /**
@@ -181,7 +188,7 @@ public class PropertyMetadata
      */
     public PropertyMetadata withMergeInfo(MergeInfo mergeInfo) {
         return new PropertyMetadata(_required, _description, _index, _defaultValue,
-                mergeInfo, _valueNulls, _contentNulls);
+                mergeInfo, _valueNulls, _contentNulls, _unwrapper);
     }
 
     /**
@@ -190,7 +197,12 @@ public class PropertyMetadata
     public PropertyMetadata withNulls(Nulls valueNulls,
             Nulls contentNulls) {
         return new PropertyMetadata(_required, _description, _index, _defaultValue,
-                _mergeInfo, valueNulls, contentNulls);
+                _mergeInfo, valueNulls, contentNulls, _unwrapper);
+    }
+
+    public PropertyMetadata withUnwrapper(NameTransformer unwrapper) {
+        return new PropertyMetadata(_required, _description, _index, _defaultValue,
+                _mergeInfo, _valueNulls, _contentNulls, unwrapper);
     }
 
     public PropertyMetadata withDefaultValue(String def) {
@@ -203,12 +215,12 @@ public class PropertyMetadata
             return this;
         }
         return new PropertyMetadata(_required, _description, _index, def,
-                _mergeInfo, _valueNulls, _contentNulls);
+                _mergeInfo, _valueNulls, _contentNulls, _unwrapper);
     }
 
     public PropertyMetadata withIndex(Integer index) {
         return new PropertyMetadata(_required, _description, index, _defaultValue,
-                _mergeInfo, _valueNulls, _contentNulls);
+                _mergeInfo, _valueNulls, _contentNulls, _unwrapper);
     }
 
     public PropertyMetadata withRequired(Boolean b) {
@@ -220,7 +232,7 @@ public class PropertyMetadata
             return this;
         }
         return new PropertyMetadata(b, _description, _index, _defaultValue,
-                _mergeInfo, _valueNulls, _contentNulls);
+                _mergeInfo, _valueNulls, _contentNulls, _unwrapper);
     }
 
     /*
@@ -272,4 +284,8 @@ public class PropertyMetadata
      * @since 2.9
      */
     public Nulls getContentNulls() { return _contentNulls; }
+
+    public boolean isUnwrapped() { return _unwrapper != null; }
+
+    public NameTransformer getUnwrapper() { return _unwrapper; }
 }

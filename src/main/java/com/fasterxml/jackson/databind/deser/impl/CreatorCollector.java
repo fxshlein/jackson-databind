@@ -187,6 +187,9 @@ public class CreatorCollector
                     if (name.isEmpty() && (properties[i].getInjectableValueId() != null)) {
                         continue;
                     }
+                    if (properties[i].getMetadata().isUnwrapped()) {
+                        continue;
+                    }
                     Integer old = names.put(name, Integer.valueOf(i));
                     if (old != null) {
                         throw new IllegalArgumentException(String.format(

@@ -551,7 +551,7 @@ index, owner, defs[index], propDef);
                 }
                 NameTransformer unwrapper = intr.findUnwrappingNameTransformer(param);
                 if (unwrapper != null) {
-                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, i, param, null);
+                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.creatorParameterName(i), i, param, null);
                     ++explicitNameCount;
                     continue;
                 }
@@ -730,7 +730,7 @@ nonAnnotatedParamIndex, ctor);
                 }
                 NameTransformer unwrapper = intr.findUnwrappingNameTransformer(param);
                 if (unwrapper != null) {
-                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, i, param, null);
+                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.creatorParameterName(i), i, param, null);
                     ++implicitNameCount;
                     continue;
                 }
@@ -861,7 +861,7 @@ nonAnnotatedParamIndex, ctor);
                 //   as that will not work with Creators well at all
                 NameTransformer unwrapper = ctxt.getAnnotationIntrospector().findUnwrappingNameTransformer(param);
                 if (unwrapper != null) {
-                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.UNWRAPPED_CREATOR_PARAM_NAME, i, param, null);
+                    properties[i] = constructCreatorProperty(ctxt, beanDesc, UnwrappedPropertyHandler.creatorParameterName(i), i, param, null);
                     continue;
                 }
                 name = candidate.findImplicitParamName(i);
@@ -1195,6 +1195,7 @@ paramIndex, candidate);
         // 22-Sep-2019, tatu: for [databind#2458] need more work on getting metadata
         //   about SetterInfo, mergeability
         metadata = _getSetterInfo(ctxt, property, metadata);
+        metadata = _getPropertyUnwrapper(ctxt, property, metadata);
 
         // Note: contextualization of typeDeser _should_ occur in constructor of CreatorProperty
         // so it is not called directly here
@@ -1290,6 +1291,22 @@ paramIndex, candidate);
         }
         if ((valueNulls != null) || (contentNulls != null)) {
             metadata = metadata.withNulls(valueNulls, contentNulls);
+        }
+        return metadata;
+    }
+
+    /**
+     * Helper method that, if present, adds the {@link NameTransformer}
+     * for unwrapping the given property to the metadata.
+     */
+    protected PropertyMetadata _getPropertyUnwrapper(DeserializationContext ctxt, BeanProperty prop, PropertyMetadata metadata)
+    {
+        AnnotatedMember am = prop.getMember();
+        if (am != null) {
+            NameTransformer unwrapper = ctxt.getAnnotationIntrospector().findUnwrappingNameTransformer(am);
+            if (unwrapper != null) {
+                metadata = metadata.withUnwrapper(unwrapper);
+            }
         }
         return metadata;
     }
